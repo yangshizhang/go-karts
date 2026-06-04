@@ -1,4 +1,4 @@
-import CoreLocation
+﻿import CoreLocation
 import Foundation
 import SwiftUI
 
@@ -11,13 +11,32 @@ enum LapMode: String, CaseIterable, Identifiable, Codable {
 
 enum RacingLineSignal: String, Codable {
     case accelerate
-    case caution
+    case braking
+
+    init(speed: Double, fastThreshold: Double) {
+        self = speed >= fastThreshold ? .accelerate : .braking
+    }
 
     var color: Color {
         switch self {
         case .accelerate: .green
-        case .caution: .red
+        case .braking: .yellow
         }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let value = try container.decode(String.self)
+        switch value {
+        case "accelerate": self = .accelerate
+        case "braking", "caution": self = .braking
+        default: self = .braking
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
     }
 }
 
@@ -56,8 +75,32 @@ struct TrackDefinition: Identifiable, Codable {
     var updatedAt = Date()
 }
 
+extension TrackPoint {
+    func normalizedSpeed(maximum: Double) -> Double {
+        guard maximum > 0 else { return 0 }
+        return min(max(speed / maximum, 0), 1)
+    }
+
+    func swiftUIColor(maximumSpeed: Double) -> Color {
+        Color(uiColor: uiColor(maximumSpeed: maximumSpeed))
+    }
+
+    func uiColor(maximumSpeed: Double) -> UIColor {
+        let ratio = CGFloat(normalizedSpeed(maximum: maximumSpeed))
+        let red = 1.0 - ratio
+        let green: CGFloat = 1.0
+        return UIColor(red: red, green: green, blue: 0, alpha: 0.92)
+    }
+}
+
 extension CLLocationCoordinate2D {
     func distance(to other: CLLocationCoordinate2D) -> CLLocationDistance {
         CLLocation(latitude: latitude, longitude: longitude).distance(from: CLLocation(latitude: other.latitude, longitude: other.longitude))
+    }
+
+    func shifted(eastMeters: Double, northMeters: Double) -> CLLocationCoordinate2D {
+        let metersPerDegreeLatitude = 111_320.0
+        let metersPerDegreeLongitude = cos(latitude * .pi / 180) * metersPerDegreeLatitude
+        return CLLocationCoordinate2D(latitude: latitude + northMeters / metersPerDegreeLatitude, longitude: longitude + eastMeters / metersPerDegreeLongitude)
     }
 }
