@@ -1,10 +1,9 @@
 import CoreLocation
+import MapKit
 import SwiftUI
 
 #if canImport(MAMapKit)
 import MAMapKit
-#else
-import MapKit
 #endif
 
 struct CoordinateValue {
@@ -27,10 +26,21 @@ struct TrackMapDrawingView: View {
 
     var body: some View {
         #if canImport(MAMapKit)
-        AMapDrawingRepresentable(selectedTool: selectedTool, onDraw: onDraw)
+        if Bundle.main.hasAMapKey {
+            AMapDrawingRepresentable(selectedTool: selectedTool, onDraw: onDraw)
+        } else {
+            MapKitDrawingRepresentable(selectedTool: selectedTool, onDraw: onDraw)
+        }
         #else
         MapKitDrawingRepresentable(selectedTool: selectedTool, onDraw: onDraw)
         #endif
+    }
+}
+
+private extension Bundle {
+    var hasAMapKey: Bool {
+        guard let key = object(forInfoDictionaryKey: "AMapApiKey") as? String else { return false }
+        return !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 }
 
@@ -43,8 +53,11 @@ struct AMapDrawingRepresentable: UIViewRepresentable {
 
     func makeUIView(context: Context) -> MAMapView {
         let mapView = MAMapView(frame: .zero)
+        MAMapView.updatePrivacyShow(.didShow, privacyInfo: .didContain)
+        MAMapView.updatePrivacyAgree(.didAgree)
         mapView.showsUserLocation = true
         mapView.userTrackingMode = .follow
+        mapView.zoomLevel = 18
         context.coordinator.attach(to: mapView)
         return mapView
     }
@@ -76,7 +89,8 @@ struct AMapDrawingRepresentable: UIViewRepresentable {
         }
     }
 }
-#else
+#endif
+
 struct MapKitDrawingRepresentable: UIViewRepresentable {
     let selectedTool: DrawingTool
     let onDraw: (CoordinateValue, CGPoint, Date) -> Void
@@ -123,4 +137,3 @@ struct MapKitDrawingRepresentable: UIViewRepresentable {
         }
     }
 }
-#endif
