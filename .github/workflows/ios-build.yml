@@ -41,6 +41,47 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO
 
+  unsigned-ipa:
+    name: Build Unsigned IPA
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Xcode Version
+        run: xcodebuild -version
+
+      - name: Install CocoaPods Dependencies
+        run: pod install
+
+      - name: Build Unsigned iOS App
+        run: |
+          xcodebuild build \
+            -workspace GoKartsRacingLines.xcworkspace \
+            -scheme GoKartsRacingLines \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: Package Unsigned IPA
+        run: |
+          APP_PATH=$(find build/DerivedData/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' -type d | head -n 1)
+          test -n "$APP_PATH"
+          rm -rf build/unsigned-ipa/Payload
+          mkdir -p build/unsigned-ipa/Payload
+          cp -R "$APP_PATH" build/unsigned-ipa/Payload/
+          (cd build/unsigned-ipa && zip -qry GoKartsRacingLines-unsigned.ipa Payload)
+
+      - name: Upload Unsigned IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GoKartsRacingLines-unsigned-ipa
+          path: build/unsigned-ipa/GoKartsRacingLines-unsigned.ipa
+          if-no-files-found: error
+
   signed-ipa:
     name: Build Signed IPA
     runs-on: macos-15
