@@ -37,7 +37,7 @@ final class CameraService: ObservableObject {
             start()
         case .notDetermined:
             AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
-                Task { @MainActor in
+                DispatchQueue.main.async { [weak self] in
                     self?.authorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
                     if granted { self?.start() }
                 }
@@ -52,7 +52,7 @@ final class CameraService: ObservableObject {
             self?.configureIfNeeded()
             guard let session = self?.session, !session.isRunning else { return }
             session.startRunning()
-            Task { @MainActor [weak self] in
+            DispatchQueue.main.async { [weak self] in
                 self?.isRunning = true
             }
         }
@@ -62,7 +62,7 @@ final class CameraService: ObservableObject {
         sessionQueue.async { [weak self] in
             guard let session = self?.session, session.isRunning else { return }
             session.stopRunning()
-            Task { @MainActor [weak self] in
+            DispatchQueue.main.async { [weak self] in
                 self?.isRunning = false
             }
         }
