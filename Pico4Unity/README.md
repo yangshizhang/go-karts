@@ -97,3 +97,29 @@ This gives stable local MR placement after initial alignment. For higher precisi
 1. Connect Pico 4 by USB and enable developer mode.
 2. Unity → Build Settings → Android → Build or Build And Run.
 3. If using command line, configure Unity batch mode with Android target and your installed PICO SDK.
+
+## Automated Setup
+
+The project includes `Assets/GoKartsPico/Editor/PicoProjectBootstrapper.cs`.
+
+After opening the project in Unity:
+
+1. Unity auto-runs the bootstrapper once.
+2. You can also run `GoKarts Pico → Setup Project` manually.
+3. It creates the default scene `Assets/GoKartsPico/Scenes/GoKartsPicoMain.unity`.
+4. It configures Android ARM64, IL2CPP, app id `com.rov.gokarts.pico`, materials, scene objects, and build settings.
+5. Run `GoKarts Pico → Build Android APK` to create `Pico4Unity/Builds/GoKartsPico4.apk`.
+
+## GitHub Actions APK Build
+
+A root workflow is included at `.github/workflows/pico-unity-build.yml`.
+
+To use it, add Unity activation secrets:
+
+- `UNITY_LICENSE`
+- `UNITY_EMAIL`
+- `UNITY_PASSWORD`
+
+Then run Actions → `Pico Unity Build` → Run workflow.
+
+If the PICO Unity Integration SDK is not committed into the repository, open the project locally once, import the SDK package, verify settings, then commit the imported SDK/plugin files or use a private package source.
