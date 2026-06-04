@@ -136,7 +136,7 @@ struct TrackMRView: UIViewRepresentable {
         private func marker(title: String, color: UIColor, at position: SIMD3<Float>) -> Entity {
             let container = Entity()
             container.position = position + SIMD3<Float>(0, 0.08, 0)
-            let disc = ModelEntity(mesh: .generateCylinder(height: 0.05, radius: 0.55), materials: [UnlitMaterial(color: color.withAlphaComponent(0.85))])
+            let disc = ModelEntity(mesh: .generateBox(width: 1.1, height: 0.05, depth: 1.1), materials: [UnlitMaterial(color: color.withAlphaComponent(0.85))])
             container.addChild(disc)
 
             let textMesh = MeshResource.generateText(title, extrusionDepth: 0.01, font: .boldSystemFont(ofSize: 0.28), containerFrame: .zero, alignment: .center, lineBreakMode: .byWordWrapping)
