@@ -7,6 +7,9 @@ import UIKit
 struct DriveView: View {
     @EnvironmentObject private var appState: AppState
     @StateObject private var telemetry = LocationMotionService()
+    @State private var showingSaveSheet = false
+    @State private var draftTrackName = ""
+    @State private var draftLapMode: LapMode = .closedCircuit
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -15,7 +18,7 @@ struct DriveView: View {
 
             VStack(spacing: 12) {
                 if appState.showDebugTelemetry {
-                    TelemetryHUD(locationSpeed: telemetry.latestLocation?.speed, pointCount: appState.currentTrack.racingLine.count, isRecording: telemetry.isRecording)
+                    TelemetryHUD(locationSpeed: telemetry.latestLocation?.speed, inertialOffset: telemetry.inertialOffsetMeters, pointCount: appState.currentTrack.racingLine.count, isRecording: telemetry.isRecording)
                 }
                 Text("MR 模式：行车线按 GPS 赛道坐标落在真实地面")
                     .font(.caption.weight(.semibold))
@@ -39,11 +42,21 @@ struct DriveView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task { telemetry.start() }
         .onDisappear { telemetry.stop() }
+        .sheet(isPresented: $showingSaveSheet) {
+            DriveSaveTrackSheet(trackName: $draftTrackName, lapMode: $draftLapMode) {
+                appState.saveCurrentTrack(name: draftTrackName, lapMode: draftLapMode)
+                showingSaveSheet = false
+            }
+            .presentationDetents([.medium])
+        }
     }
 
     private func toggleRecording() {
         if telemetry.isRecording {
             appState.replaceRacingLine(with: telemetry.stopRecording())
+            draftTrackName = appState.currentTrack.name == "未命名赛道" ? "" : appState.currentTrack.name
+            draftLapMode = appState.currentTrack.lapMode
+            showingSaveSheet = true
         } else {
             telemetry.startRecording()
         }
@@ -111,7 +124,7 @@ struct TrackMRView: UIViewRepresentable {
                 let distance = simd_distance(start, end)
                 guard distance > 0.15, distance < 80 else { continue }
 
-                let color: UIColor = pair.1.signal == .caution ? .systemRed : .systemGreen
+                let color = pair.1.uiColor(maximumSpeed: 12)
                 let material = UnlitMaterial(color: color.withAlphaComponent(0.92))
                 let mesh = MeshResource.generateBox(width: 0.42, height: 0.035, depth: distance)
                 let entity = ModelEntity(mesh: mesh, materials: [material])
@@ -184,12 +197,14 @@ struct TrackMRView: UIViewRepresentable {
 
 private struct TelemetryHUD: View {
     let locationSpeed: Double?
+    let inertialOffset: Double
     let pointCount: Int
     let isRecording: Bool
 
     var body: some View {
         HStack(spacing: 16) {
             Label("\(Int(max(locationSpeed ?? 0, 0) * 3.6)) km/h", systemImage: "speedometer")
+            Label(String(format: "IMU %.1fm", inertialOffset), systemImage: "gyroscope")
             Label("\(pointCount) 点", systemImage: "point.3.connected.trianglepath.dotted")
             if isRecording { Text("REC").foregroundStyle(.red).fontWeight(.black) }
         }
@@ -197,5 +212,31 @@ private struct TelemetryHUD: View {
         .padding(.horizontal, 14)
         .frame(height: 36)
         .background(.ultraThinMaterial, in: Capsule())
+    }
+}
+
+private struct DriveSaveTrackSheet: View {
+    @Binding var trackName: String
+    @Binding var lapMode: LapMode
+    let onSave: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("保存实跑赛道") {
+                    TextField("赛道名", text: $trackName)
+                    Picker("类型", selection: $lapMode) {
+                        ForEach(LapMode.allCases) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                }
+                Section {
+                    Button("保存") { onSave() }
+                        .disabled(trackName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .navigationTitle("赛道信息")
+        }
     }
 }
