@@ -1,4 +1,4 @@
-import SwiftUI
+﻿import SwiftUI
 
 enum DrawingTool: String, CaseIterable, Identifiable {
     case boundary = "圈选赛道区域"
@@ -15,6 +15,7 @@ struct DrawingSample: Identifiable {
 
 struct DrawingView: View {
     @EnvironmentObject private var appState: AppState
+    @StateObject private var telemetry = LocationMotionService()
     @State private var selectedTool: DrawingTool = .boundary
     @State private var drawingSamples: [DrawingSample] = []
     @State private var lastDragPoint: CGPoint?
@@ -32,7 +33,7 @@ struct DrawingView: View {
                     appendPoint(coordinate: coordinate, screenPoint: screenPoint, timestamp: timestamp)
                 }
                 DrawingStrokeOverlay(samples: drawingSamples, maximumSpeed: appState.renderFastStrokeThreshold)
-                Text("单指绘画 · 双指移动地图 · 低速黄色/高速绿色渐变")
+                Text("单指绘画/圈选 · 双指移动地图 · 低速黄/高速绿")
                     .font(.caption.weight(.semibold))
                     .padding(.horizontal, 12)
                     .frame(height: 32)
@@ -60,6 +61,8 @@ struct DrawingView: View {
             TrackManagerView()
                 .environmentObject(appState)
         }
+        .task { telemetry.start() }
+        .onDisappear { telemetry.stop() }
     }
 
     private var controlPanel: some View {
@@ -70,18 +73,34 @@ struct DrawingView: View {
                 }
             }
             .pickerStyle(.segmented)
+
             Picker("赛道类型", selection: $appState.currentTrack.lapMode) {
                 ForEach(LapMode.allCases) { mode in
                     Text(mode.rawValue).tag(mode)
                 }
             }
-            HStack {
-                Button("新赛道") { appState.newTrack(); drawingSamples.removeAll() }
+
+            HStack(spacing: 12) {
+                Button("新赛道") {
+                    appState.newTrack()
+                    resetDrawingState()
+                }
                 Button("清空当前") { clearSelectedTool() }
+                Button(telemetry.isRecording ? "结束实录" : "实跑记录") { toggleLiveRecording() }
+                    .foregroundStyle(telemetry.isRecording ? .red : .green)
                 Spacer()
+            }
+
+            HStack {
                 Text("区域 \(appState.currentTrack.boundary.count) 点 · 线 \(appState.currentTrack.racingLine.count) 点")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                Spacer()
+                if telemetry.isRecording {
+                    Label("REC", systemImage: "record.circle")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.red)
+                }
             }
         }
         .padding(12)
@@ -89,6 +108,7 @@ struct DrawingView: View {
     }
 
     private func appendPoint(coordinate: CoordinateValue, screenPoint: CGPoint, timestamp: Date) {
+        guard !telemetry.isRecording else { return }
         let speed = dragSpeed(from: screenPoint, at: timestamp)
         let signal = RacingLineSignal(speed: speed, fastThreshold: appState.renderFastStrokeThreshold)
         let point = TrackPoint(coordinate: coordinate.locationCoordinate, speed: speed, timestamp: timestamp, signal: signal)
@@ -122,6 +142,10 @@ struct DrawingView: View {
             appState.currentTrack.racingLine.removeAll()
         }
         appState.currentTrack.updatedAt = Date()
+        resetDrawingState()
+    }
+
+    private func resetDrawingState() {
         drawingSamples.removeAll()
         lastDragPoint = nil
         lastDragDate = nil
@@ -131,6 +155,19 @@ struct DrawingView: View {
         draftTrackName = appState.currentTrack.name == "未命名赛道" ? "" : appState.currentTrack.name
         draftLapMode = appState.currentTrack.lapMode
         showingSaveSheet = true
+    }
+
+    private func toggleLiveRecording() {
+        if telemetry.isRecording {
+            let points = telemetry.stopRecording()
+            appState.replaceRacingLine(with: points)
+            selectedTool = .racingLine
+            resetDrawingState()
+            prepareSave()
+        } else {
+            selectedTool = .racingLine
+            telemetry.startRecording()
+        }
     }
 }
 
