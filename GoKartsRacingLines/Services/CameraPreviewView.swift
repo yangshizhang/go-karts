@@ -49,19 +49,22 @@ final class CameraService: ObservableObject {
 
     func start() {
         sessionQueue.async { [weak self] in
-            guard let self else { return }
-            self.configureIfNeeded()
-            guard !self.session.isRunning else { return }
-            self.session.startRunning()
-            Task { @MainActor in self.isRunning = true }
+            self?.configureIfNeeded()
+            guard let session = self?.session, !session.isRunning else { return }
+            session.startRunning()
+            Task { @MainActor [weak self] in
+                self?.isRunning = true
+            }
         }
     }
 
     func stop() {
         sessionQueue.async { [weak self] in
-            guard let self, self.session.isRunning else { return }
-            self.session.stopRunning()
-            Task { @MainActor in self.isRunning = false }
+            guard let session = self?.session, session.isRunning else { return }
+            session.stopRunning()
+            Task { @MainActor [weak self] in
+                self?.isRunning = false
+            }
         }
     }
 
