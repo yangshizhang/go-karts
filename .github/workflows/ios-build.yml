@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       export_method:
-        description: IPA export method: development, ad-hoc, app-store, or enterprise
+        description: "IPA export method: development, ad-hoc, app-store, or enterprise"
         required: true
         default: ad-hoc
         type: choice
