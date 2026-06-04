@@ -1,4 +1,4 @@
-import CoreLocation
+﻿import CoreLocation
 import MapKit
 import SwiftUI
 
@@ -44,6 +44,15 @@ private extension Bundle {
     }
 }
 
+private func requireTwoFingerMapPan(on view: UIView) {
+    view.gestureRecognizers?.forEach { recognizer in
+        if let pan = recognizer as? UIPanGestureRecognizer {
+            pan.minimumNumberOfTouches = max(pan.minimumNumberOfTouches, 2)
+        }
+    }
+    view.subviews.forEach { requireTwoFingerMapPan(on: $0) }
+}
+
 #if canImport(MAMapKit)
 struct AMapDrawingRepresentable: UIViewRepresentable {
     let selectedTool: DrawingTool
@@ -64,9 +73,10 @@ struct AMapDrawingRepresentable: UIViewRepresentable {
 
     func updateUIView(_ uiView: MAMapView, context: Context) {
         context.coordinator.onDraw = onDraw
+        DispatchQueue.main.async { requireTwoFingerMapPan(on: uiView) }
     }
 
-    final class Coordinator: NSObject {
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         var onDraw: (CoordinateValue, CGPoint, Date) -> Void
         weak var mapView: MAMapView?
 
@@ -76,13 +86,20 @@ struct AMapDrawingRepresentable: UIViewRepresentable {
 
         func attach(to mapView: MAMapView) {
             self.mapView = mapView
+            requireTwoFingerMapPan(on: mapView)
             let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
             pan.minimumNumberOfTouches = 1
+            pan.maximumNumberOfTouches = 1
+            pan.delegate = self
             mapView.addGestureRecognizer(pan)
         }
 
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            false
+        }
+
         @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
-            guard let mapView else { return }
+            guard let mapView, gesture.numberOfTouches <= 1 else { return }
             let point = gesture.location(in: mapView)
             let coordinate = mapView.convert(point, toCoordinateFrom: mapView)
             onDraw(CoordinateValue(coordinate), point, Date())
@@ -107,6 +124,7 @@ struct MapKitDrawingRepresentable: UIViewRepresentable {
 
     func updateUIView(_ uiView: MKMapView, context: Context) {
         context.coordinator.onDraw = onDraw
+        DispatchQueue.main.async { requireTwoFingerMapPan(on: uiView) }
     }
 
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
@@ -119,18 +137,20 @@ struct MapKitDrawingRepresentable: UIViewRepresentable {
 
         func attach(to mapView: MKMapView) {
             self.mapView = mapView
+            requireTwoFingerMapPan(on: mapView)
             let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
             pan.minimumNumberOfTouches = 1
+            pan.maximumNumberOfTouches = 1
             pan.delegate = self
             mapView.addGestureRecognizer(pan)
         }
 
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-            true
+            false
         }
 
         @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
-            guard let mapView else { return }
+            guard let mapView, gesture.numberOfTouches <= 1 else { return }
             let point = gesture.location(in: mapView)
             let coordinate = mapView.convert(point, toCoordinateFrom: mapView)
             onDraw(CoordinateValue(coordinate), point, Date())
