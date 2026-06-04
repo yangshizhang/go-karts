@@ -11,6 +11,8 @@ import MAMapKit
 final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         #if canImport(AMapFoundationKit)
+        AMapServices.updatePrivacyShow(.didShow, privacyInfo: .didContain)
+        AMapServices.updatePrivacyAgree(.didAgree)
         if let key = Bundle.main.object(forInfoDictionaryKey: "AMapApiKey") as? String, !key.isEmpty {
             AMapServices.shared().apiKey = key
         }
