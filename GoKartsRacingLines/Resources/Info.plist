@@ -23,11 +23,11 @@
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>NSCameraUsageDescription</key>
-    <string>用于在实时画面中叠加赛车行车线。</string>
+    <string>用于 MR 模式识别真实赛道并叠加 3D 行车线。</string>
     <key>NSLocationWhenInUseUsageDescription</key>
-    <string>用于记录赛道位置、速度和起终点判断。</string>
+    <string>用于把行车线锚定到真实赛道 GPS 坐标。</string>
     <key>NSMotionUsageDescription</key>
-    <string>用于结合设备姿态稳定行车线渲染。</string>
+    <string>用于结合设备姿态稳定 MR 行车线方向。</string>
     <key>UILaunchScreen</key>
     <dict/>
     <key>UISupportedInterfaceOrientations</key>
