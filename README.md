@@ -54,9 +54,9 @@ base64 -i Certificates.p12 | pbcopy
 base64 -i Profile.mobileprovision | pbcopy
 ```
 
-Then open GitHub → repository → Settings → Secrets and variables → Actions → New repository secret.
+Then open GitHub 鈫?repository 鈫?Settings 鈫?Secrets and variables 鈫?Actions 鈫?New repository secret.
 
-After secrets are configured, open Actions → `iOS Build` → Run workflow, choose `development`, `ad-hoc`, `app-store`, or `enterprise`, then download the `GoKartsRacingLines-ipa` artifact.
+After secrets are configured, open Actions 鈫?`iOS Build` 鈫?Run workflow, choose `development`, `ad-hoc`, `app-store`, or `enterprise`, then download the `GoKartsRacingLines-ipa` artifact.
 
 ## Permissions
 
